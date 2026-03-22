@@ -1,0 +1,125 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.SqlClient.DataClassification;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
+using Victory.Data;
+using Victory.Entity;
+using Victory.Models;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+
+namespace Victory.Controllers
+{
+    public class AdminBlogPageAddController : Controller
+    {
+        public readonly VictoryContext _context;
+        public readonly IWebHostEnvironment _hostEnvironment;
+
+        public AdminBlogPageAddController(VictoryContext context, IWebHostEnvironment hostEnvironment)
+        {
+            _context = context;
+            _hostEnvironment = hostEnvironment; 
+        }
+
+        public IActionResult BlogPageAdd()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult BlogPageAdd(BlogPage model, IFormFile BlogPageFile)
+        {
+            //if (ModelState.IsValid)
+            //{  
+            var blogspage = new BlogPage();
+
+            blogspage.Banner = model.Banner;
+            blogspage.Description = model.Description;
+            blogspage.ImageUrl = model.ImageUrl;
+
+            if (BlogPageFile != null)
+            {
+                string uploadFolder = Path.Combine(_hostEnvironment.WebRootPath, "assets/img");
+                string uniqueFileName = Guid.NewGuid().ToString()+ "_" + BlogPageFile.FileName;
+                string filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    BlogPageFile.CopyTo(fileStream);
+                }
+
+                blogspage.ImageUrl = uniqueFileName;
+            }
+
+            _context.Add(blogspage);
+            _context.SaveChanges();
+            return RedirectToAction("Index", "AdminPanel");
+            //}
+            return View();
+        }
+        [HttpGet]
+        public IActionResult BlogPageEdit(int id)
+        {
+            var blog = _context.BlogPages.Find(id);
+            if (blog == null) return NotFound();
+
+            var model = new BlogPageModel();
+
+            model.Banner = blog.Banner;
+            model.Description = blog.Description;
+            model.ImageUrl = blog.ImageUrl;
+
+            return View(model);
+        }
+        [HttpPost]
+        public IActionResult BlogPageEdit(int id, BlogPageModel model, IFormFile BlogPageFile)
+        {
+            if (BlogPageFile == null) ModelState.Remove("BlogPageFile");
+            if (!ModelState.IsValid) return View(model);
+
+            var blog = _context.BlogPages.Find(id);
+            if (blog == null) return NotFound();
+
+            blog.Banner = model.Banner;
+            blog.Description = model.Description;
+            blog.ImageUrl = model.ImageUrl;
+
+            if (BlogPageFile != null)
+            {
+                string uploadFolder = Path.Combine(_hostEnvironment.WebRootPath, "assets/img");
+                if (!string.IsNullOrEmpty(blog.ImageUrl))
+                {
+                    string oldFile = Path.Combine(uploadFolder, blog.ImageUrl);
+                    if (System.IO.File.Exists(oldFile))
+                    {
+                        System.IO.File.Delete(oldFile);
+                    }
+                }
+
+                string uniqueFileName = Guid.NewGuid().ToString() + "_" + BlogPageFile.FileName;
+                string newFileName = Path.Combine(uploadFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(newFileName, FileMode.Create))
+                {
+                    BlogPageFile.CopyTo(fileStream);
+                }
+
+                blog.ImageUrl = uniqueFileName;
+            }
+
+            _context.SaveChanges();
+            return RedirectToAction("Index","AdminPanel");
+        }
+        [HttpPost]
+        public IActionResult BlogPageDelete(int id)
+        {
+            var blog = _context.BlogPages.Find(id);
+
+            if (blog != null)
+            {
+                _context.BlogPages.Remove(blog);
+                _context.SaveChanges();
+            }
+
+            return RedirectToAction("Index","AdminPanel");
+        }
+    }
+}
