@@ -1,0 +1,77 @@
+using Microsoft.AspNetCore.Mvc;
+using Victory.Data;
+using Victory.Entity;
+
+namespace Victory.Controllers
+{
+    public class AdminBlogAddController : Controller
+    {
+        public readonly VictoryContext _context;
+
+        public AdminBlogAddController(VictoryContext context)
+        {
+            _context = context;
+        }
+
+        public IActionResult BlogAdd()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult BlogAdd(Blog a)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.Blogs.Add(a);
+                _context.SaveChanges();
+                return RedirectToAction("Index", "AdminPanel");
+            }
+            return View();
+        }
+        [HttpGet]
+        public IActionResult BlogEdit(int id)
+        {
+            var blog = _context.Blogs.Find(id);
+            if (blog == null) return NotFound();
+
+            var model = new Blog();
+
+            model.blogId = blog.blogId;
+            model.Banner = blog.Banner;
+            model.Description = blog.Description;
+            model.Chef = blog.Chef;
+            model.Date = blog.Date;
+
+            return View(model);
+        }
+        [HttpPost]
+        public IActionResult BlogEdit(int id, Blog model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var blog = _context.Blogs.Find(id);
+            if (blog == null) return NotFound();
+
+            blog.Banner = model.Banner;
+            blog.Description = model.Description;
+            blog.Chef = model.Chef;
+            blog.Date = model.Date;
+
+            _context.SaveChanges();
+            return RedirectToAction("Index","AdminPanel");
+        }
+        [HttpPost]
+        public IActionResult BlogDelete(int id)
+        {
+            var blog = _context.Blogs.Find(id);
+
+            if (blog != null)
+            {
+                _context.Blogs.Remove(blog);
+                _context.SaveChanges();
+            }
+
+            return RedirectToAction("Index","AdminPanel");
+        }
+    }
+}
