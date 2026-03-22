@@ -1,0 +1,117 @@
+using Microsoft.AspNetCore.Mvc;
+using Victory.Data;
+using Victory.Entity;
+using Victory.Models;
+
+namespace Victory.Controllers
+{
+    public class AdminContactPageAddController : Controller
+    {
+        public readonly VictoryContext _context;
+        public readonly IWebHostEnvironment _hostEnvironment;
+
+        public AdminContactPageAddController(VictoryContext context, IWebHostEnvironment hostEnvironment)
+        {
+            _context = context;
+            _hostEnvironment = hostEnvironment;
+        }
+
+        public IActionResult ContactPageAdd()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult ContactPageAdd(ContactPage model, IFormFile ContactPageFile)
+        {            
+            var contactpage = new ContactPage();
+
+            contactpage.Banner = model.Banner;
+            contactpage.Description = model.Description;
+            contactpage.ImageUrl = model.ImageUrl;
+
+            if (ContactPageFile != null)
+            {
+                string uploadFolder = Path.Combine(_hostEnvironment.WebRootPath, "assets/img");
+                string uniqueFileName = Guid.NewGuid().ToString()+"_"+ContactPageFile.FileName;
+                string filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    ContactPageFile.CopyTo(fileStream);
+                }
+
+                contactpage.ImageUrl = uniqueFileName;
+            }
+
+            _context.Add(contactpage);
+            _context.SaveChanges();
+            return RedirectToAction("Index", "AdminPanel");            
+        }
+        [HttpGet]
+        public IActionResult ContactPageEdit(int id)
+        {
+            var contactpage = _context.ContactPages.Find(id);
+            if (contactpage == null) return NotFound();
+
+            var model = new ContactPageModel();
+
+            model.Banner = contactpage.Banner;
+            model.Description = contactpage.Description;
+            model.ImageUrl = contactpage.ImageUrl;
+
+            return View(model);
+        }
+        [HttpPost]
+        public IActionResult ContactPageEdit(int id, ContactPageModel model, IFormFile ContactPageFile)
+        {
+            if (ContactPageFile == null) ModelState.Remove("ContactPageFile");
+            if (!ModelState.IsValid) return View(model);
+
+            var contactpage = _context.ContactPages.Find(id);
+            if (contactpage == null) return NotFound();
+
+            contactpage.Banner = model.Banner;
+            contactpage.Description = model.Description;
+            contactpage.ImageUrl = model.ImageUrl;
+
+            if (ContactPageFile != null)
+            {
+                string uploadFolder = Path.Combine(_hostEnvironment.WebRootPath, "assets/img");
+                if (!string.IsNullOrEmpty(contactpage.ImageUrl))
+                {
+                    string oldFile = Path.Combine(uploadFolder, contactpage.ImageUrl);
+                    if (System.IO.File.Exists(oldFile))
+                    {
+                        System.IO.File.Delete(oldFile);
+                    }
+
+                }
+                string uniqueFileName = Guid.NewGuid().ToString() + "_" + ContactPageFile.FileName;
+                string filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath,FileMode.Create))
+                {
+                    ContactPageFile.CopyTo(fileStream);
+                }
+
+                contactpage.ImageUrl = uniqueFileName;
+            }
+
+            _context.SaveChanges();
+            return RedirectToAction("Index","AdminPanel");
+        }
+        [HttpPost]
+        public IActionResult ContactPageDelete(int id)
+        {
+            var contactpage = _context.ContactPages.Find(id);
+
+            if (contactpage != null)
+            {
+                _context.ContactPages.Remove(contactpage);
+                _context.SaveChanges();
+            }
+
+            return RedirectToAction("Index","AdminPanel");
+        }
+    }
+}
